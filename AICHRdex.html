@@ -1,0 +1,368 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Local AI - Chromebook</title>
+<style>
+:root {
+  color-scheme: dark;
+  --bg:#10131b; --panel:#191e2a; --panel2:#222a39;
+  --text:#edf1fa; --muted:#9ca9bd; --accent:#8b9cff;
+  --border:#30394b; --user:#303d68;
+}
+* { box-sizing:border-box; }
+body {
+  margin:0; background:var(--bg); color:var(--text);
+  font:15px system-ui, sans-serif; min-height:100vh;
+}
+header {
+  padding:17px 20px; border-bottom:1px solid var(--border);
+  display:flex; justify-content:space-between; align-items:center;
+  gap:12px; background:var(--panel);
+}
+h1 { margin:0; font-size:19px; }
+small,.muted { color:var(--muted); }
+main {
+  max-width:900px; margin:auto; padding:18px;
+  display:flex; flex-direction:column; min-height:calc(100vh - 70px);
+}
+#status {
+  background:var(--panel); border:1px solid var(--border);
+  border-radius:12px; padding:12px; margin-bottom:14px;
+  color:var(--muted); font-size:13px;
+}
+#bar { height:5px; background:var(--panel2); border-radius:9px; margin-top:9px; overflow:hidden; }
+#progress { height:100%; width:0%; background:var(--accent); transition:width .2s; }
+#chat {
+  flex:1; display:flex; flex-direction:column; gap:12px;
+  padding:5px 0 18px;
+}
+.message {
+  max-width:88%; padding:13px 15px; border-radius:15px;
+  line-height:1.55; white-space:pre-wrap; overflow-wrap:anywhere;
+}
+.user { align-self:flex-end; background:var(--user); }
+.assistant { align-self:flex-start; background:var(--panel); border:1px solid var(--border); }
+.message .who {
+  display:block; font-size:11px; color:var(--muted);
+  margin-bottom:5px; text-transform:uppercase; letter-spacing:.06em;
+}
+#welcome {
+  margin:auto; text-align:center; max-width:520px;
+  color:var(--muted); padding:30px 12px;
+}
+#composer {
+  position:sticky; bottom:0; background:var(--bg);
+  padding:12px 0 4px; border-top:1px solid var(--border);
+}
+textarea {
+  width:100%; min-height:66px; max-height:180px; resize:vertical;
+  padding:13px; border-radius:12px; border:1px solid var(--border);
+  background:var(--panel); color:var(--text); font:inherit;
+}
+button,select {
+  border:1px solid var(--border); border-radius:10px;
+  background:var(--panel2); color:var(--text);
+  padding:10px 13px; font:inherit; cursor:pointer;
+}
+button:disabled { opacity:.45; cursor:not-allowed; }
+button.primary { background:var(--accent); color:#101426; border:0; font-weight:700; }
+.controls {
+  display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin-top:9px;
+}
+.controls label { color:var(--muted); font-size:13px; }
+#send { margin-left:auto; }
+details {
+  margin-top:13px; background:var(--panel);
+  padding:12px; border:1px solid var(--border); border-radius:12px;
+}
+summary { cursor:pointer; color:var(--muted); }
+.setting { display:flex; gap:12px; align-items:center; margin-top:12px; flex-wrap:wrap; }
+.setting input { width:150px; }
+footer { text-align:center; color:var(--muted); font-size:12px; padding:14px; }
+@media(max-width:600px) {
+  main { padding:12px; }
+  .message { max-width:96%; }
+  #send { margin-left:0; }
+}
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <h1>✨ Local AI</h1>
+    <small>Chromebook edition · Runs on your device</small>
+  </div>
+  <button id="export">Export chat</button>
+</header>
+
+<main>
+  <section id="status" aria-live="polite">
+    <strong id="statusText">Model not loaded</strong>
+    <div id="statusDetail">Connect to the internet and press Load AI.</div>
+    <div id="bar"><div id="progress"></div></div>
+  </section>
+
+  <section id="chat">
+    <div id="welcome">
+      <h2>Welcome!</h2>
+      <p>This chatbot runs its language model in your browser. The first load downloads the model; later visits should use the browser cache.</p>
+      <p>Press <b>Load AI</b> to begin.</p>
+    </div>
+  </section>
+
+  <section id="composer">
+    <textarea id="prompt" placeholder="Load the AI first..." disabled></textarea>
+    <div class="controls">
+      <button class="primary" id="send" disabled>Send</button>
+      <button id="load">Load AI</button>
+      <button id="clear">Clear chat</button>
+    </div>
+    <details>
+      <summary>Settings</summary>
+      <div class="setting">
+        <label for="length">Maximum response length</label>
+        <select id="length">
+          <option value="64">64 tokens · Fast</option>
+          <option value="96" selected>96 tokens · Balanced</option>
+          <option value="128">128 tokens · Longer</option>
+        </select>
+      </div>
+      <div class="setting">
+        <label><input type="checkbox" id="memory" checked> Remember recent messages</label>
+      </div>
+      <p class="muted">Small models can make mistakes. Avoid relying on this chatbot for important decisions.</p>
+    </details>
+  </section>
+  <footer>SmolLM2 · Transformers.js · CPU/WASM mode</footer>
+</main>
+
+<script type="module">
+const MODEL = "onnx-community/SmolLM2-135M-Instruct-ONNX-MHA";
+
+const statusText = document.getElementById("statusText");
+const statusDetail = document.getElementById("statusDetail");
+const progress = document.getElementById("progress");
+const chat = document.getElementById("chat");
+const promptBox = document.getElementById("prompt");
+const sendButton = document.getElementById("send");
+const loadButton = document.getElementById("load");
+
+let generator = null;
+let busy = false;
+let history = [];
+
+function status(title, detail = "") {
+  statusText.textContent = title;
+  statusDetail.textContent = detail;
+}
+
+function addMessage(role, content) {
+  const welcome = document.getElementById("welcome");
+  if (welcome) welcome.remove();
+
+  const bubble = document.createElement("div");
+  bubble.className = "message " + role;
+
+  const who = document.createElement("span");
+  who.className = "who";
+  who.textContent = role === "user" ? "You" : "Local AI";
+
+  const body = document.createElement("div");
+  body.textContent = content;
+
+  bubble.append(who, body);
+  chat.appendChild(bubble);
+  bubble.scrollIntoView({ behavior:"smooth", block:"end" });
+}
+
+function saveHistory() {
+  try {
+    localStorage.setItem("chromebook-local-ai-chat", JSON.stringify(history));
+  } catch (e) {
+    console.warn("Could not save chat", e);
+  }
+}
+
+function restoreHistory() {
+  try {
+    history = JSON.parse(localStorage.getItem("chromebook-local-ai-chat") || "[]");
+    if (!Array.isArray(history)) history = [];
+    history.forEach(m => {
+      if (m && (m.role === "user" || m.role === "assistant") &&
+          typeof m.content === "string") {
+        addMessage(m.role, m.content);
+      }
+    });
+  } catch (e) {
+    history = [];
+  }
+}
+
+async function loadAI() {
+  if (generator || busy) return;
+
+  busy = true;
+  loadButton.disabled = true;
+  status("Loading AI engine...", "Preparing the browser-based model runtime.");
+  progress.style.width = "3%";
+
+  try {
+    const { pipeline, env } =
+      await import("https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.8.1");
+
+    // Use CPU/WASM instead of experimental GPU execution.
+    env.backends.onnx.wasm.numThreads = 2;
+    env.backends.onnx.wasm.proxy = false;
+    env.useBrowserCache = true;
+
+    status("Downloading model...", "The first download may take several minutes. Keep this tab open.");
+
+    generator = await pipeline(
+      "text-generation",
+      MODEL,
+      {
+        device: "wasm",
+        dtype: "q4",
+        progress_callback: (event) => {
+          if (event && event.status === "progress" &&
+              typeof event.progress === "number") {
+            progress.style.width =
+              Math.max(2, Math.min(99, event.progress)) + "%";
+            status("Downloading model...",
+              event.file || "Downloading model files...");
+          } else if (event && event.status === "done") {
+            progress.style.width = "100%";
+          }
+        }
+      }
+    );
+
+    progress.style.width = "100%";
+    status("AI is ready!", "Model loaded. You can now chat, even without internet once files are cached.");
+    promptBox.disabled = false;
+    promptBox.placeholder = "Ask me something...";
+    sendButton.disabled = false;
+    promptBox.focus();
+
+  } catch (error) {
+    console.error(error);
+    generator = null;
+    status("Could not load the model",
+      (error && error.message ? error.message : String(error)) +
+      " — Check your internet connection, then reload the page.");
+    progress.style.width = "0%";
+    loadButton.disabled = false;
+  } finally {
+    busy = false;
+  }
+}
+
+function getConversation() {
+  const recent = document.getElementById("memory").checked
+    ? history.slice(-8)
+    : history.slice(-1);
+
+  return [
+    {
+      role: "system",
+      content: "You are a helpful, friendly AI assistant. Give clear, accurate answers. If you do not know something, say so. Keep answers reasonably concise."
+    },
+    ...recent.map(m => ({ role:m.role, content:m.content }))
+  ];
+}
+
+function extractAnswer(result) {
+  const generated = result?.[0]?.generated_text;
+
+  if (typeof generated === "string") return generated;
+
+  if (Array.isArray(generated)) {
+    const lastAssistant = [...generated].reverse()
+      .find(m => m && m.role === "assistant");
+    if (lastAssistant) return lastAssistant.content || "";
+    const last = generated[generated.length - 1];
+    return last?.content || "";
+  }
+
+  return "I couldn't read the model's response.";
+}
+
+async function sendMessage() {
+  const text = promptBox.value.trim();
+  if (!text || !generator || busy) return;
+
+  history.push({ role:"user", content:text });
+  addMessage("user", text);
+  saveHistory();
+  promptBox.value = "";
+
+  busy = true;
+  sendButton.disabled = true;
+  loadButton.disabled = true;
+  status("Thinking...", "The Chromebook is generating a response.");
+
+  try {
+    const result = await generator(getConversation(), {
+      max_new_tokens: Number(document.getElementById("length").value),
+      do_sample: false,
+      repetition_penalty: 1.08
+    });
+
+    const answer = extractAnswer(result).trim() || "I couldn't generate a response.";
+    history.push({ role:"assistant", content:answer });
+    addMessage("assistant", answer);
+    saveHistory();
+    status("AI is ready", "Ask another question whenever you're ready.");
+
+  } catch (error) {
+    console.error(error);
+    status("Generation error", error.message || String(error));
+    addMessage("assistant", "Something went wrong while generating that answer. Try a shorter message or reload the page.");
+  } finally {
+    busy = false;
+    sendButton.disabled = !generator;
+    loadButton.disabled = !!generator;
+    promptBox.focus();
+  }
+}
+
+loadButton.addEventListener("click", loadAI);
+sendButton.addEventListener("click", sendMessage);
+
+promptBox.addEventListener("keydown", event => {
+  if (event.key === "Enter" && !event.shiftKey) {
+    event.preventDefault();
+    sendMessage();
+  }
+});
+
+document.getElementById("clear").addEventListener("click", () => {
+  if (busy) return;
+  history = [];
+  localStorage.removeItem("chromebook-local-ai-chat");
+  chat.innerHTML = '<div id="welcome"><h2>Chat cleared</h2><p>Start a new conversation!</p></div>';
+});
+
+document.getElementById("export").addEventListener("click", () => {
+  const text = history.map(m =>
+    (m.role === "user" ? "You" : "Local AI") + ":\n" + m.content
+  ).join("\n\n");
+
+  const blob = new Blob([text || "No conversation yet."], {
+    type:"text/plain"
+  });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "local-ai-chat.txt";
+  a.click();
+  URL.revokeObjectURL(url);
+});
+
+restoreHistory();
+</script>
+</body>
+</html>
