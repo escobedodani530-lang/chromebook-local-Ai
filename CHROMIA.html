@@ -1,0 +1,241 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#090e19">
+<meta name="description" content="CHROMIA AI 4.0 — experimental private, on-device AI chat for Chromebook.">
+<title>CHROMIA AI 4.0</title>
+<style>
+:root{color-scheme:dark;--bg:#090e19;--panel:#111a2a;--panel2:#17243a;--border:#263852;--text:#edf4ff;--muted:#9aacc4;--teal:#62e6d0;--blue:#85a9ff;--purple:#b59aff;--danger:#ff8e9b;--good:#72e0ac}
+*{box-sizing:border-box}
+body{margin:0;min-height:100vh;background:radial-gradient(ellipse at 15% -10%,#17314c 0,transparent 42%),radial-gradient(ellipse at 95% 20%,#251c48 0,transparent 34%),var(--bg);color:var(--text);font:15px/1.5 system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+button,textarea,select{font:inherit}
+button{cursor:pointer;border:1px solid var(--border);background:var(--panel2);color:var(--text);border-radius:12px;padding:10px 14px;transition:transform .15s,border-color .15s,opacity .15s}
+button:hover:not(:disabled){border-color:var(--teal);transform:translateY(-1px)}
+button:disabled{opacity:.42;cursor:not-allowed}
+.primary{background:linear-gradient(120deg,#1d847f,#355caa);border-color:#3d9f9e;color:white;font-weight:700}
+.danger{color:#ffc4cb}
+header{max-width:1040px;margin:auto;padding:24px 18px 14px;display:flex;align-items:center;justify-content:space-between;gap:14px}
+.brand{display:flex;align-items:center;gap:12px}
+.logo{width:44px;height:44px;border-radius:14px;display:grid;place-items:center;background:linear-gradient(140deg,#2b8f94,#7453a9);font-size:22px;box-shadow:0 8px 28px #0007}
+h1{font-size:21px;letter-spacing:.08em;margin:0;font-weight:800}
+.sub{font-size:12px;color:var(--muted);letter-spacing:.14em;text-transform:uppercase}
+.version{font-size:11px;color:var(--teal);border:1px solid #36766f;border-radius:99px;padding:5px 9px;white-space:nowrap}
+main{max-width:900px;margin:auto;padding:8px 18px 30px}
+.panel{border:1px solid var(--border);background:linear-gradient(145deg,#121c2cF2,#0e1726F2);border-radius:18px;box-shadow:0 16px 50px #0003}
+.model{padding:17px;margin-bottom:14px}
+.modeltop{display:flex;justify-content:space-between;align-items:flex-start;gap:14px;flex-wrap:wrap}
+h2{font-size:15px;margin:0 0 4px}
+.muted{color:var(--muted)}
+.small{font-size:12px}
+.pills{display:flex;gap:7px;flex-wrap:wrap;margin:12px 0}
+.pill{font-size:11px;color:#bed4e9;border:1px solid #304663;background:#14243a;border-radius:99px;padding:4px 9px}
+.actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.statusline{display:flex;justify-content:space-between;gap:12px;margin-top:12px;font-size:12px;color:var(--muted)}
+.track{height:7px;background:#202e43;border-radius:99px;overflow:hidden;margin-top:7px}
+#progress{height:100%;width:0;background:linear-gradient(90deg,var(--teal),var(--blue),var(--purple));transition:width .2s}
+.notice{margin-top:12px;padding:10px 12px;border-radius:12px;background:#15243a;border:1px solid #2a4566;color:#c5d8ef;font-size:12px}
+.notice strong{color:var(--teal)}
+#chatPanel{overflow:hidden}
+.chathead{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:13px 16px;border-bottom:1px solid var(--border)}
+#chat{min-height:300px;max-height:52vh;overflow-y:auto;padding:18px;display:flex;flex-direction:column;gap:13px}
+.welcome{margin:auto;text-align:center;max-width:510px;padding:34px 12px;color:var(--muted)}
+.welcome .orb{font-size:38px;margin-bottom:8px}
+.msg{max-width:88%;padding:12px 14px;border-radius:15px;white-space:pre-wrap;overflow-wrap:anywhere}
+.msg.user{align-self:flex-end;background:#203c65;border:1px solid #315582}
+.msg.ai{align-self:flex-start;background:#16243a;border:1px solid #2a405f}
+.msg .who{display:block;font-size:10px;text-transform:uppercase;letter-spacing:.13em;color:#a6bdd8;margin-bottom:5px}
+.msg.error{border-color:#8c4651;color:#ffd0d5}
+.composer{padding:13px;border-top:1px solid var(--border);background:#0c1523}
+textarea{display:block;width:100%;min-height:68px;max-height:180px;resize:vertical;border:1px solid var(--border);border-radius:13px;background:#101c2d;color:var(--text);padding:12px 13px;outline:none}
+textarea:focus{border-color:#4b9e9b}
+.composerfoot{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-top:9px;flex-wrap:wrap}
+select{background:#142238;color:var(--text);border:1px solid var(--border);border-radius:10px;padding:8px}
+footer{text-align:center;color:#8294aa;font-size:11px;padding:17px 5px}
+a{color:var(--teal)}
+@media(max-width:600px){header{padding:18px 13px 10px}main{padding:8px 12px 22px}.msg{max-width:96%}#chat{min-height:270px;max-height:56vh}.model{padding:14px}}
+</style>
+</head>
+<body>
+<header>
+ <div class="brand"><div class="logo">✦</div><div><h1>CHROMIA AI</h1><div class="sub">Local intelligence · Chromebook edition</div></div></div>
+ <span class="version">VERSION 4.0 · EXPERIMENTAL</span>
+</header>
+<main>
+ <section class="panel model">
+  <div class="modeltop">
+   <div><h2>On-device model</h2><div class="muted small">SmolLM2 135M Instruct · quantized Q4 · about 80.3 MiB</div></div>
+   <div class="actions"><button id="loadBtn" class="primary">↓ Load AI</button><button id="unloadBtn" disabled>Unload</button></div>
+  </div>
+  <div class="pills"><span class="pill">135 million parameters</span><span class="pill">ChatML instruct</span><span class="pill">WebGPU preferred</span><span class="pill">No API key</span></div>
+  <div class="statusline"><span id="status">Model not loaded</span><span id="progressText">Ready</span></div>
+  <div class="track"><div id="progress"></div></div>
+  <div class="notice"><strong>Privacy:</strong> prompts are processed locally in this browser. The page downloads the model and engine files, but does not send your chat messages to the model host. This small model can make mistakes; do not rely on it for important decisions. WebGPU is recommended. CPU fallback may be very slow on a Celeron Chromebook.</div>
+ </section>
+
+ <section class="panel" id="chatPanel">
+  <div class="chathead"><div><strong>Conversation</strong><div class="muted small" id="engineStatus">Engine waiting for model</div></div><div class="actions"><button id="exportBtn" disabled>Export</button><button id="clearBtn">Clear</button></div></div>
+  <div id="chat" aria-live="polite"><div class="welcome"><div class="orb">✧</div><strong>Welcome to CHROMIA</strong><p>Load the local model to begin. Your first model download is about 80 MiB and is stored only in memory for this session.</p></div></div>
+  <div class="composer">
+   <textarea id="prompt" placeholder="Load the model to start chatting…" disabled maxlength="4000"></textarea>
+   <div class="composerfoot"><label class="muted small" for="tokens">Response length</label><select id="tokens" disabled><option value="48">48 tokens · faster</option><option value="64" selected>64 tokens · balanced</option><option value="96">96 tokens · longer</option><option value="128">128 tokens · longest</option></select><button id="sendBtn" class="primary" disabled>Send ↗</button></div>
+   <div class="muted small" style="margin-top:7px">Enter to send · Shift + Enter for a new line</div>
+  </div>
+ </section>
+ <footer>CHROMIA AI 4.0 · Experimental local inference · Model: Hugging Face SmolLM2 135M Instruct (Apache-2.0) · Engine: MicroLLM lab (Apache-2.0)</footer>
+</main>
+<script type="module">
+const REV = "74b33db844a27b5f18f532802bbb6e3db495ea2d";
+const ROOT = "https://cdn.jsdelivr.net/gh/robss2020/microllm-lab@" + REV;
+const TOKENIZER_URL = ROOT + "/models/smollm2-135m-instruct/tokenizer.json";
+const MODEL_URL = "https://media.githubusercontent.com/media/robss2020/microllm-lab/" + REV + "/models/smollm2-135m-instruct/model.q4.bin";
+const MODEL_ID = "smollm2-135m-instruct";
+const CARD = {
+ hf:"HuggingFaceTB/SmolLM2-135M-Instruct", vocabSize:49152, nLayers:30,
+ dModel:576, nHeads:9, nKvHeads:3, dFf:1536, maxSeqLen:2048,
+ ropeTheta:100000, headDim:64, params:134515008, q4Bytes:84221440,
+ bosId:1, eosId:2, padId:2, unkId:0, bosToken:"<|im_start|>",
+ eosToken:"<|im_end|>", chatTemplate:null,
+ specials:{"<|im_start|>":1,"<|im_end|>":2,"<|endoftext|>":0},
+ qGroup:32, template:"chatml",
+ defaultSystem:"You are CHROMIA, a helpful, honest, concise AI assistant running locally on the user's Chromebook. Be clear about uncertainty. Do not claim to have internet access or live information."
+};
+const $ = id => document.getElementById(id);
+const loadBtn=$("loadBtn"),unloadBtn=$("unloadBtn"),sendBtn=$("sendBtn");
+const statusEl=$("status"),progress=$("progress"),progressText=$("progressText");
+const chat=$("chat"),promptEl=$("prompt"),engineStatus=$("engineStatus");
+let worker=null,loaded=false,busy=false,loading=false,history=[],currentBubble=null,currentText="";
+
+function setStatus(text,detail,percent){
+ statusEl.textContent=text;
+ if(detail!==undefined)progressText.textContent=detail;
+ if(percent!==undefined)progress.style.width=Math.max(0,Math.min(100,percent))+"%";
+}
+function setControls(){
+ loadBtn.disabled=loading||loaded;
+ unloadBtn.disabled=!loaded||busy;
+ promptEl.disabled=!loaded||busy;
+ sendBtn.disabled=!loaded||busy;
+ $("tokens").disabled=!loaded||busy;
+ $("exportBtn").disabled=history.length===0;
+}
+function addMessage(role,text,kind){
+ const wrap=document.createElement("div");
+ wrap.className="msg "+(kind||role);
+ const who=document.createElement("span");
+ who.className="who";who.textContent=role==="user"?"You":"CHROMIA";
+ const body=document.createElement("div");body.textContent=text||"";
+ wrap.append(who,body);chat.append(wrap);chat.scrollTop=chat.scrollHeight;
+ return body;
+}
+function clearWelcome(){if(chat.querySelector(".welcome"))chat.innerHTML="";}
+function fail(text){
+ loading=false;busy=false;setStatus("Not loaded",text,0);
+ engineStatus.textContent="Engine unavailable";
+ addMessage("ai","I couldn't start the model. "+text,"error");setControls();
+}
+async function fetchJson(url,label){
+ const r=await fetch(url,{cache:"force-cache"});
+ if(!r.ok)throw new Error(label+" download failed (HTTP "+r.status+").");
+ return await r.json();
+}
+async function fetchModel(url){
+ const r=await fetch(url,{cache:"force-cache"});
+ if(!r.ok)throw new Error("Model download failed (HTTP "+r.status+").");
+ const total=Number(r.headers.get("content-length"))||84221440;
+ if(!r.body){
+  const b=await r.arrayBuffer();setStatus("Model downloaded","Preparing model",100);return b;
+ }
+ const reader=r.body.getReader(),parts=[];let received=0,lastPaint=0;
+ while(true){
+  const item=await reader.read();if(item.done)break;
+  parts.push(item.value);received+=item.value.byteLength;
+  const now=Date.now();
+  if(now-lastPaint>120){const pct=received/total*100;setStatus("Downloading model",Math.round(received/1048576*10)/10+" / "+Math.round(total/1048576*10)/10+" MiB",pct);lastPaint=now;}
+ }
+ const all=new Uint8Array(received);let offset=0;
+ for(const part of parts){all.set(part,offset);offset+=part.byteLength;}
+ if(all.byteLength<4||String.fromCharCode(all[0],all[1],all[2],all[3])!=="PGW1")throw new Error("The model host did not return a valid PGW1 model file. The model download was stopped.");
+ setStatus("Model downloaded","Initializing local engine",100);
+ return all.buffer;
+}
+function makeWorker(){
+ if(worker)return;
+ worker=new Worker("./CHROMIA-worker.js",{type:"module",name:"CHROMIA-local-inference"});
+ worker.onmessage=ev=>{
+  const m=ev.data||{};
+  if(m.type==="log"){
+   engineStatus.textContent=m.message||"Engine log";
+  }else if(m.type==="loaded"){
+   loading=false;loaded=true;
+   const mode=m.backend==="webgpu"?"WebGPU acceleration":(m.backend==="wasm"?"WASM CPU":"CPU fallback");
+   setStatus("Model ready",mode,100);engineStatus.textContent="Ready · "+mode;
+   addMessage("ai","I'm ready. Ask me something!","ai");setControls();promptEl.focus();
+  }else if(m.type==="token"){
+   if(currentBubble){currentText+=m.piece||"";currentBubble.textContent=currentText;chat.scrollTop=chat.scrollHeight;}
+  }else if(m.type==="done"){
+   if(currentText)history.push({role:"assistant",content:currentText});
+   currentBubble=null;currentText="";busy=false;
+   engineStatus.textContent="Ready · "+(m.backend||"local")+" · "+(m.tokPerS?m.tokPerS.toFixed(1)+" tokens/s":"");
+   setStatus("Model ready","Response complete",100);setControls();promptEl.focus();
+  }else if(m.type==="error"){
+   const msg=m.message||"Unknown model error";
+   if(loading){fail(msg);}else{
+    busy=false;if(currentBubble){currentBubble.textContent="Error: "+msg;currentBubble.parentElement.classList.add("error");}
+    currentBubble=null;currentText="";engineStatus.textContent="Generation error";setStatus("Model ready","Generation stopped",100);setControls();
+   }
+  }else if(m.type==="unloaded"){
+   loaded=false;loading=false;setStatus("Model not loaded","Unloaded",0);
+   engineStatus.textContent="Engine waiting for model";setControls();
+  }
+ };
+ worker.onerror=ev=>{const msg=ev.message||"The engine worker could not start. Check that jsDelivr is accessible.";if(loading)fail(msg);else{busy=false;setStatus("Engine error",msg,0);engineStatus.textContent="Worker error";setControls();}};
+}
+async function loadModel(){
+ if(loading||loaded)return;
+ loading=true;setControls();clearWelcome();
+ setStatus("Preparing download","Fetching tokenizer",0);
+ engineStatus.textContent="Loading model assets";
+ try{
+  const tokenizerSpec=await fetchJson(TOKENIZER_URL,"Tokenizer");
+  if(!tokenizerSpec.model||!tokenizerSpec.model.vocab)throw new Error("The tokenizer file is not in the expected format.");
+  setStatus("Tokenizer ready","Downloading 80 MiB model",0);
+  const buffer=await fetchModel(MODEL_URL);
+  makeWorker();
+  setStatus("Starting inference engine","Setting up WebGPU / CPU",100);
+  worker.postMessage({cmd:"load",modelId:MODEL_ID,buffer:buffer,tokenizerSpec:tokenizerSpec,card:CARD,preferGpu:true},[buffer]);
+ }catch(e){fail(e.message||String(e));}
+}
+function makePrompt(latest){
+ const recent=history.slice(-8);
+ const transcript=recent.map(m=>(m.role==="user"?"User":"Assistant")+": "+m.content).join("\n\n");
+ return "Use this conversation history to answer the latest message. Continue naturally and do not repeat the transcript.\n\n"+transcript+"\n\nUser: "+latest;
+}
+function send(){
+ const value=promptEl.value.trim();
+ if(!value||!loaded||busy)return;
+ promptEl.value="";clearWelcome();
+ history.push({role:"user",content:value});
+ addMessage("user",value,"user");
+ currentText="";currentBubble=addMessage("ai","Thinking…","ai");
+ busy=true;setControls();engineStatus.textContent="Generating locally…";
+ setStatus("Generating response","Running on this device",100);
+ worker.postMessage({cmd:"generate",prompt:makePrompt(value),maxNewTokens:Number($("tokens").value)||64});
+}
+loadBtn.addEventListener("click",loadModel);
+unloadBtn.addEventListener("click",()=>{if(worker&&loaded&&!busy)worker.postMessage({cmd:"unload"});});
+sendBtn.addEventListener("click",send);
+promptEl.addEventListener("keydown",ev=>{if(ev.key==="Enter"&&!ev.shiftKey){ev.preventDefault();send();}});
+$("clearBtn").addEventListener("click",()=>{history=[];chat.innerHTML='<div class="welcome"><div class="orb">✧</div><strong>Conversation cleared</strong><p>Your next message will start a fresh chat.</p></div>';setControls();});
+$("exportBtn").addEventListener("click",()=>{
+ const text=history.map(m=>(m.role==="user"?"You":"CHROMIA")+":\n"+m.content).join("\n\n");
+ const blob=new Blob([text],{type:"text/plain"}),url=URL.createObjectURL(blob),a=document.createElement("a");
+ a.href=url;a.download="chromia-chat.txt";a.click();URL.revokeObjectURL(url);
+});
+setControls();
+if(!("Worker" in window))setStatus("Worker support unavailable","This browser cannot run the local engine",0);
+else if(!navigator.gpu)setStatus("Model not loaded","WebGPU unavailable; CPU fallback may be slow",0);
+</script>
+</body>
+</html>
