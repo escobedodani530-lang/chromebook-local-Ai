@@ -131,6 +131,7 @@ function addMessage(role,text,kind){
 }
 function clearWelcome(){if(chat.querySelector(".welcome"))chat.innerHTML="";}
 function fail(text){
+ if(worker){worker.terminate();worker=null;}
  loading=false;busy=false;setStatus("Not loaded",text,0);
  engineStatus.textContent="Engine unavailable";
  addMessage("ai","I couldn't start the model. "+text,"error");setControls();
@@ -207,10 +208,10 @@ async function loadModel(){
   worker.postMessage({cmd:"load",modelId:MODEL_ID,buffer:buffer,tokenizerSpec:tokenizerSpec,card:CARD,preferGpu:true},[buffer]);
  }catch(e){fail(e.message||String(e));}
 }
-function makePrompt(latest){
+function makePrompt(){
  const recent=history.slice(-8);
  const transcript=recent.map(m=>(m.role==="user"?"User":"Assistant")+": "+m.content).join("\n\n");
- return "Use this conversation history to answer the latest message. Continue naturally and do not repeat the transcript.\n\n"+transcript+"\n\nUser: "+latest;
+ return "Use this conversation history to answer the latest message. Continue naturally and do not repeat the transcript.\n\n"+transcript;
 }
 function send(){
  const value=promptEl.value.trim();
@@ -221,7 +222,7 @@ function send(){
  currentText="";currentBubble=addMessage("ai","Thinking…","ai");
  busy=true;setControls();engineStatus.textContent="Generating locally…";
  setStatus("Generating response","Running on this device",100);
- worker.postMessage({cmd:"generate",prompt:makePrompt(value),maxNewTokens:Number($("tokens").value)||64});
+ worker.postMessage({cmd:"generate",prompt:makePrompt(),maxNewTokens:Number($("tokens").value)||64});
 }
 loadBtn.addEventListener("click",loadModel);
 unloadBtn.addEventListener("click",()=>{if(worker&&loaded&&!busy)worker.postMessage({cmd:"unload"});});
