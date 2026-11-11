@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>CHROMIA AI 4.0 · Model host check</title>
+<style>
+:root{color-scheme:dark;font-family:system-ui,sans-serif;background:#07111f;color:#eff6ff}
+body{max-width:720px;margin:40px auto;padding:20px;line-height:1.55}
+main{background:#0c1a2c;border:1px solid #29405c;border-radius:16px;padding:22px}
+button{background:#83c4ff;color:#061322;border:0;border-radius:10px;padding:12px 18px;font-weight:700;font-size:1rem}
+#result{margin-top:18px;padding:14px;background:#13243a;border-radius:10px;white-space:pre-wrap;overflow-wrap:anywhere}
+.muted{color:#adc1dc}h1{font-size:1.65rem}
+</style>
+</head>
+<body>
+<main>
+<h1>CHROMIA AI 4.0 · Model host check</h1>
+<p class="muted">This test checks whether a GitHub Pages website can fetch the model host using browser JavaScript (including CORS). It reads only the first response chunk, then cancels; it should not download the full 80 MiB file.</p>
+<button id="test">Test model host</button>
+<div id="result" role="status" aria-live="polite">Ready. Press the test button.</div>
+</main>
+<script>
+const MODEL_URL = "https://media.githubusercontent.com/media/robss2020/microllm-lab/main/models/smollm2-135m-instruct/model.q4.bin";
+const result = document.getElementById("result");
+document.getElementById("test").addEventListener("click", async () => {
+  const button = document.getElementById("test");
+  button.disabled = true;
+  result.textContent = "Testing cross-origin model fetch…";
+  const controller = new AbortController();
+  let reader;
+  try {
+    const response = await fetch(MODEL_URL, {
+      method: "GET",
+      mode: "cors",
+      credentials: "omit",
+      cache: "no-store",
+      signal: controller.signal
+    });
+    if (!response.ok) throw new Error("HTTP " + response.status + " " + response.statusText);
+    if (!response.body) throw new Error("The browser did not expose a readable response stream.");
+    reader = response.body.getReader();
+    const first = await reader.read();
+    if (first.done || !first.value || first.value.byteLength === 0) {
+      throw new Error("The host responded, but no model bytes were readable.");
+    }
+    await reader.cancel();
+    result.textContent =
+      "PASS — browser fetch and CORS are working.\n" +
+      "HTTP status: " + response.status + "\n" +
+      "First chunk received: " + first.value.byteLength.toLocaleString() + " bytes\n" +
+      "The rest of the model download was cancelled.\n\n" +
+      "You can proceed with the CHROMIA engine fork.";
+    result.style.border = "1px solid #71dfb4";
+  } catch (error) {
+    try { await reader?.cancel(); } catch {}
+    controller.abort();
+    result.textContent =
+      "NOT PASSED — the browser could not fetch the model.\n" +
+      (error && error.message ? error.message : String(error)) +
+      "\n\nDo not fork/configure the AI yet. Tell ChatGPT this exact result.";
+    result.style.border = "1px solid #ff8999";
+  } finally {
+    controller.abort();
+    button.disabled = false;
+  }
+});
+</script>
+</body>
+</html>
