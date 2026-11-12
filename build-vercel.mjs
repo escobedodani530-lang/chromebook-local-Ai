@@ -75,8 +75,8 @@ const modelBytes = await downloadBinary(
   modelPath,
   "PGW1"
 );
-if (modelBytes > 99_000_000) {
-  throw new Error("Model exceeds Vercel Hobby static file limit safety margin: " + modelBytes);
+if (modelBytes !== 84_221_440) {
+  throw new Error("Pinned model size changed unexpectedly: " + modelBytes + " bytes");
 }
 
 let html = await readFile(join(ROOT, "CHROMIA.html"), "utf8");
