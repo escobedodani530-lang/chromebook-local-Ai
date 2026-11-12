@@ -1,0 +1,33 @@
+name: CHROMIA build validation
+
+on:
+  push:
+    branches:
+      - chromia-vercel-test
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Check out test branch
+        uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Build CHROMIA and download pinned assets
+        run: npm run build
+      - name: Verify generated site files
+        run: |
+          test -s dist/index.html
+          test -s dist/engine/worker.js
+          test -s dist/engine/kernels.wasm
+          test -s dist/engine/models/smollm2-135m-instruct/tokenizer.json
+          test "$(stat -c %s dist/models/model.q4.bin)" = "84221440"
+          test "$(head -c 4 dist/models/model.q4.bin)" = "PGW1"
+          echo "All required files verified."
