@@ -27,8 +27,11 @@ async function downloadBinary(url, destination, expectedMagic) {
   const handle = await open(destination, "r");
   const first = Buffer.alloc(4);
   try { await handle.read(first, 0, 4, 0); } finally { await handle.close(); }
-  if (first.toString("latin1") !== expectedMagic) {
-    throw new Error("Unexpected file signature for " + destination + ": " + first.toString("latin1"));
+  const validMagic = expectedMagic === "WASM"
+    ? first[0] === 0 && first[1] === 0x61 && first[2] === 0x73 && first[3] === 0x6d
+    : first.toString("latin1") === expectedMagic;
+  if (!validMagic) {
+    throw new Error("Unexpected file signature for " + destination + ": " + Array.from(first).join(","));
   }
   const size = (await stat(destination)).size;
   console.log("Downloaded " + destination + " (" + size + " bytes)");
@@ -54,7 +57,7 @@ const engineFiles = [
 for (const filename of engineFiles) {
   await downloadText(RAW + "/engine/" + filename, join(ENGINE, filename));
 }
-await downloadBinary(RAW + "/engine/kernels.wasm", join(ENGINE, "kernels.wasm"), "\\0asm");
+await downloadBinary(RAW + "/engine/kernels.wasm", join(ENGINE, "kernels.wasm"), "WASM");
 
 const tokenizerPath = join(ENGINE, "models", "smollm2-135m-instruct", "tokenizer.json");
 await downloadText(
