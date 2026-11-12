@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#09111e">
+<title>CHROMIA 5.0 · Filter-compatible preflight</title>
+<style>
+:root{color-scheme:dark;background:#09111e;color:#eaf2ff;font:15px/1.5 system-ui,sans-serif}
+*{box-sizing:border-box}body{max-width:820px;margin:28px auto;padding:0 16px}
+h1{font-size:24px}.muted{color:#a9bad0}.panel{background:#111f32;border:1px solid #2c4563;border-radius:14px;padding:16px;margin:14px 0}
+button{background:#2a7180;color:white;border:0;border-radius:10px;padding:11px 16px;font:inherit;font-weight:700}
+ul{padding:0;list-style:none}li{padding:12px;margin:9px 0;background:#111f32;border:1px solid #2c4563;border-radius:10px;overflow-wrap:anywhere}
+.ok{color:#76e5b5}.bad{color:#ff9eaa}.warn{color:#ffd27c}code{overflow-wrap:anywhere}
+small{color:#a9bad0}
+</style>
+</head>
+<body>
+<h1>✦ CHROMIA AI 5.0 · Compatibility preflight</h1>
+<p class="muted">A safe connection and hardware check. It does not use a proxy, VPN, tunnel, alternate hostname, API key, or model download. It only checks whether the browser can reach the listed public service endpoints.</p>
+<section class="panel">
+ <strong>Why this check exists</strong>
+ <p class="muted">ContentKeeper has already blocked GitHub Pages (*.github.io), jsDelivr, and Google Apps Script. This test checks whether the remaining candidate services are reachable from this browser. A network or CORS error cannot always distinguish a filter block from a browser security restriction.</p>
+ <button id="run">Run compatibility checks</button>
+ <p id="summary" class="muted" aria-live="polite">Ready. No requests have been made yet.</p>
+</section>
+<ul id="results" aria-live="polite"></ul>
+<section class="panel">
+ <strong>Privacy and safety</strong>
+ <p class="muted">No chat text, account information, API keys, cookies, or credentials are sent. Requests contain no prompt data. This page does not attempt to access blocked services by another route. If a required service is blocked, the next step is a school IT allowlist request.</p>
+</section>
+<script>
+const $=id=>document.getElementById(id);
+const tests=[
+ ["GitHub Raw (possible approved engine-file source)","https://raw.githubusercontent.com/","GET"],
+ ["OpenRouter API (online model router)","https://openrouter.ai/api/v1/models","GET"],
+ ["Groq API (online provider alternative)","https://api.groq.com/openai/v1/models","GET"],
+ ["Google Gemini API (online provider alternative)","https://generativelanguage.googleapis.com/","GET"]
+];
+function add(name,detail,state){
+ const li=document.createElement("li"),b=document.createElement("strong"),d=document.createElement("div");
+ b.className=state;b.textContent=name;d.textContent=detail;li.append(b,d);$("results").append(li);
+}
+async function checkEndpoint(name,url){
+ const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),9000);
+ try{
+  const r=await fetch(url,{method:"GET",mode:"cors",credentials:"omit",cache:"no-store",signal:controller.signal});
+  const detail="Browser reached endpoint · HTTP "+r.status+" "+r.statusText+". No response body was downloaded.";
+  try{await r.body?.cancel()}catch{}
+  add(name,detail,"ok");
+  return true;
+ }catch(e){
+  const detail=(e&&e.name==="AbortError")?"Timed out after 9 seconds.":"Browser fetch failed: "+(e&&e.message||String(e))+". This may be a network filter, DNS, TLS, or CORS restriction; the page cannot identify which one.";
+  add(name,detail,"bad");return false;
+ }finally{clearTimeout(timer)}
+}
+async function checkWorker(){
+ return new Promise(resolve=>{
+  let worker,url,done=false;
+  const finish=(ok,msg)=>{if(done)return;done=true;clearTimeout(timer);try{worker?.terminate();if(url)URL.revokeObjectURL(url)}catch{}add("In-memory Web Worker",msg,ok?"ok":"bad");resolve(ok)};
+  const timer=setTimeout(()=>finish(false,"No response within 5 seconds."),5000);
+  try{
+   const blob=new Blob(["postMessage({secure:isSecureContext,origin:location.origin})"],{type:"text/javascript"});
+   url=URL.createObjectURL(blob);worker=new Worker(url);
+   worker.onmessage=e=>finish(true,"Worker started · secure context: "+e.data.secure+" · page origin: "+e.data.origin);
+   worker.onerror=e=>finish(false,e.message||"Browser refused to start the Worker.");
+  }catch(e){finish(false,e&&e.message||String(e))}
+ });
+}
+async function run(){
+ $("run").disabled=true;$("results").innerHTML="";$("summary").textContent="Running small, credential-free checks…";
+ add("Browser context","Protocol: "+location.protocol+" · secure context: "+isSecureContext+" · origin: "+location.origin,"warn");
+ add("WebGPU",navigator.gpu?"navigator.gpu is present. Testing adapter…":"navigator.gpu is unavailable in this page context.",navigator.gpu?"ok":"warn");
+ if(navigator.gpu){
+  try{const a=await navigator.gpu.requestAdapter();add("WebGPU adapter",a?"An adapter was returned.":"No adapter was returned.",a?"ok":"warn")}
+  catch(e){add("WebGPU adapter",e&&e.message||String(e),"bad")}
+ }
+ const worker=await checkWorker();
+ let successes=0;
+ for(const [name,url] of tests){if(await checkEndpoint(name,url))successes++}
+ $("summary").textContent="Finished. "+successes+" of "+tests.length+" network endpoints responded; in-memory Worker "+(worker?"works":"did not start")+".";
+ $("run").disabled=false;
+}
+$("run").addEventListener("click",run);
+</script>
+</body>
+</html>
