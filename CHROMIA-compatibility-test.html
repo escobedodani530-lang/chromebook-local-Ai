@@ -54,7 +54,7 @@ async function testFetch(label,url,kind) {
    await reader.cancel();
    const bytes=part.value||new Uint8Array();
    const magic=String.fromCharCode(...bytes.slice(0,4));
-   const expected=kind==="wasm"?"\\0asm":"PGW1";
+   const expected=kind==="wasm"?"\0asm":"PGW1";
    if(magic!==expected) throw new Error("First bytes were "+JSON.stringify(magic)+", not "+JSON.stringify(expected));
    add(label,"HTTP "+r.status+" · "+(kind==="wasm"?"WASM signature confirmed":"model signature PGW1 confirmed")+"; stopped after first response chunk","ok");
   }
@@ -89,6 +89,7 @@ async function testRemoteModuleWorker(){
    w.onmessage=e=>finish(!!e.data.ok,e.data.ok?"Pinned engine worker and its module imports loaded":"Module import failed: "+e.data.error);
    w.onerror=e=>finish(false,e.message||"Worker module error");
   }catch(e){finish(false,String(e&&e.message||e));}
+ });
 }
 async function run(){
  $("results").innerHTML="";
