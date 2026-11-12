@@ -26,6 +26,7 @@ const RAW = "https://raw.githubusercontent.com/robss2020/microllm-lab/" + REV;
 const MODEL = "https://media.githubusercontent.com/media/robss2020/microllm-lab/" + REV + "/models/smollm2-135m-instruct/model.q4.bin";
 const TOKENIZER = RAW + "/models/smollm2-135m-instruct/tokenizer.json";
 const WORKER_MODULE = RAW + "/engine/worker.js";
+const WASM_URL = RAW + "/engine/kernels.wasm";
 const $ = id => document.getElementById(id);
 function add(label, detail, state) {
  const li=document.createElement("li");
@@ -53,8 +54,9 @@ async function testFetch(label,url,kind) {
    await reader.cancel();
    const bytes=part.value||new Uint8Array();
    const magic=String.fromCharCode(...bytes.slice(0,4));
-   if(magic!=="PGW1") throw new Error("First bytes were "+JSON.stringify(magic)+", not PGW1");
-   add(label,"HTTP "+r.status+" · model signature PGW1 confirmed; stopped after first response chunk","ok");
+   const expected=kind==="wasm"?"\\0asm":"PGW1";
+   if(magic!==expected) throw new Error("First bytes were "+JSON.stringify(magic)+", not "+JSON.stringify(expected));
+   add(label,"HTTP "+r.status+" · "+(kind==="wasm"?"WASM signature confirmed":"model signature PGW1 confirmed")+"; stopped after first response chunk","ok");
   }
  } catch(e) {
   add(label,String(e&&e.message||e),"bad");
@@ -100,6 +102,7 @@ async function run(){
  await testFetch("GitHub raw JavaScript host",WORKER_MODULE,"module");
  await testRemoteModuleWorker();
  await testFetch("GitHub raw tokenizer",TOKENIZER,"json");
+ await testFetch("GitHub raw WASM CPU accelerator",WASM_URL,"wasm");
  await testFetch("GitHub model host",MODEL,"model");
  await testFetch("jsDelivr control", "https://cdn.jsdelivr.net/gh/robss2020/microllm-lab@"+REV+"/engine/worker.js","module");
  add("What this means","A green Blob Worker plus green raw-host engine import, tokenizer and model checks would make a locally opened CHROMIA build worth trying. WebGPU may still be unavailable on file://; CPU/WASM fallback would then be required.","warn");
