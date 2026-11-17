@@ -1,0 +1,38 @@
+name: Ollama Chromebook Lab checks
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".devcontainer/**"
+      - "ollama-chromebook/**"
+      - ".github/workflows/ollama-lab-check.yml"
+  pull_request:
+    branches: [main]
+    paths:
+      - ".devcontainer/**"
+      - "ollama-chromebook/**"
+      - ".github/workflows/ollama-lab-check.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  syntax:
+    name: Check setup and app syntax
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Check JavaScript syntax
+        run: |
+          node --check ollama-chromebook/server.mjs
+          node --check ollama-chromebook/public/app.js
+      - name: Check startup script syntax
+        run: bash -n ollama-chromebook/start.sh
+      - name: Validate devcontainer configuration
+        run: node -e "JSON.parse(require('node:fs').readFileSync('.devcontainer/devcontainer.json', 'utf8'))"
