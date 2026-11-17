@@ -1,0 +1,21 @@
+{
+  "name": "Free Ollama Chromebook Lab",
+  "build": {
+    "dockerfile": "Dockerfile",
+    "context": ".."
+  },
+  "forwardPorts": [3000],
+  "portsAttributes": {
+    "3000": {
+      "label": "Ollama Lab (private)",
+      "onAutoForward": "openBrowser",
+      "visibility": "private"
+    }
+  },
+  "hostRequirements": {
+    "cpus": 2
+  },
+  "postStartCommand": "bash ollama-chromebook/start.sh",
+  "remoteUser": "node",
+  "shutdownAction": "stopContainer"
+}

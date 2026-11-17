@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#08111f">
+  <meta name="description" content="Private browser interface for a free-tier Ollama Codespace.">
+  <title>Ollama Chromebook Lab</title>
+  <link rel="stylesheet" href="/styles.css">
+  <script src="/app.js" defer></script>
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="/" aria-label="Ollama Chromebook Lab home">
+      <span class="brand-mark">O</span>
+      <span><strong>OLLAMA LAB</strong><small>CHROMEBOOK EDITION</small></span>
+    </a>
+    <span class="privacy"><span class="dot"></span> PRIVATE SESSION</span>
+  </header>
+
+  <main>
+    <section class="hero">
+      <p class="eyebrow">NO API KEY · NO CLOUD MODEL PLAN</p>
+      <h1>Your own <span>Ollama</span> workspace.</h1>
+      <p class="lede">Ollama runs in a private GitHub Codespace. Your Chromebook is just the screen and keyboard. Model inference happens on the Codespace's CPU.</p>
+    </section>
+
+    <section class="status-card" aria-live="polite">
+      <div class="status-copy">
+        <span class="section-label">SYSTEM STATUS</span>
+        <h2 id="statusTitle">Checking Ollama…</h2>
+        <p id="statusText">Connecting to the private Ollama process.</p>
+      </div>
+      <button id="refreshButton" class="quiet" type="button">Refresh status</button>
+    </section>
+
+    <section class="model-card">
+      <div class="model-heading">
+        <div>
+          <span class="section-label">LOCAL MODEL ON THE CODESPACE</span>
+          <h2>Qwen2.5 0.5B Instruct</h2>
+          <p class="muted">Quantized Q4_K_M · approximately 398 MB · Apache 2.0</p>
+        </div>
+        <span class="model-tag">CPU MODE</span>
+      </div>
+      <div class="model-progress-wrap">
+        <div class="progress-meta"><span id="pullStatus">Model not installed</span><span id="pullPercent">0%</span></div>
+        <div class="progress-track"><div id="pullProgress"></div></div>
+      </div>
+      <div class="model-actions">
+        <button id="pullButton" class="primary" type="button" disabled>Download model</button>
+        <span class="hint">One-time download inside this Codespace. No subscription or API key.</span>
+      </div>
+    </section>
+
+    <section class="chat-card">
+      <div class="chat-heading">
+        <div><span class="section-label">CHAT</span><h2>Conversation</h2></div>
+        <div class="chat-actions">
+          <button id="exportButton" class="quiet" type="button" disabled>Export</button>
+          <button id="clearButton" class="quiet" type="button">Clear</button>
+        </div>
+      </div>
+      <div id="chat" class="chat-log" aria-live="polite">
+        <div class="welcome">
+          <div class="spark">✦</div>
+          <h3>Ready when you are.</h3>
+          <p>Check the connection, download the model, then start chatting. Your messages are sent to the Ollama process inside this Codespace, not to an AI API provider.</p>
+        </div>
+      </div>
+      <form id="chatForm" class="composer">
+        <label class="sr-only" for="prompt">Message</label>
+        <textarea id="prompt" rows="2" maxlength="6000" placeholder="Download the model to enable chat…" disabled></textarea>
+        <div class="composer-bottom">
+          <span class="hint">Enter to send · Shift + Enter for a new line</span>
+          <button id="sendButton" class="primary" type="submit" disabled>Send ↗</button>
+        </div>
+      </form>
+    </section>
+
+    <aside class="notice">
+      <strong>Cost and privacy guardrails</strong>
+      <p>This uses GitHub Codespaces' included monthly allowance, not unlimited free compute. Keep the Codespace on the included 2-core machine, leave the forwarded port private, and stop the Codespace when finished. No Ollama Cloud account, API key, external tunnel, or public port is used.</p>
+      <p>Qwen 0.5B is a small model, not a frontier AI. Replies may be slow on CPU and it can make mistakes. Do not use it for sensitive information or important decisions.</p>
+    </aside>
+
+    <footer>Ollama Chromebook Lab · Browser UI by this repository · Model: Qwen2.5 0.5B Instruct</footer>
+  </main>
+</body>
+</html>
